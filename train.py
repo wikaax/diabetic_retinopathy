@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import timm
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -9,7 +10,7 @@ from sklearn.utils import compute_class_weight
 import seaborn as sns
 import os
 
-from model import get_model
+from model import get_model, get_retfound_mae, get_medvit, get_swin
 from dataloader import get_loaders
 from tqdm import tqdm
 
@@ -20,13 +21,16 @@ df['diagnosis'] = df['diagnosis'].replace({4: 3})
 df.to_csv("messidor_data_modified.csv", index=False)
 
 train_dataset_labels = df['diagnosis'].astype(int).values
-classes = np.array(sorted(np.unique(train_dataset_labels)))  # teraz: [0, 1, 2, 3]
+classes = np.array(sorted(np.unique(train_dataset_labels)))
 
 class_weights = compute_class_weight('balanced', classes=classes, y=train_dataset_labels)
 class_weights = torch.tensor(class_weights, dtype=torch.float).to(device)
 
-model = get_model(name="vgg16", num_classes=4)
-model.to(device)
+model_name = "vgg16"
+model = get_model(model_name, num_classes=4)
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = model.to(device)
 
 criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
 optimizer = optim.Adam(model.parameters(), lr=0.0001)
@@ -35,18 +39,22 @@ train_loader, val_loader = get_loaders("messidor_data_modified.csv", "data/proce
 
 num_epochs = 20
 best_val_loss = float('inf')
-save_path = "best_model.pth"
+save_dir = "./checkpoints"
+os.makedirs(save_dir, exist_ok=True)
+save_path = os.path.join(save_dir, f"{model_name}_best.pth")
 
 for epoch in range(num_epochs):
     model.train()
     running_loss = 0.0
     print("Class weights:", class_weights)
 
-    loop = tqdm(train_loader, desc=f"🚀 Epoka {epoch+1}/{num_epochs}", unit="batch")
+    loop = tqdm(train_loader, desc=f"Epoka {epoch+1}/{num_epochs}", unit="batch")
     for images, labels in loop:
         images, labels = images.to(device), labels.to(device)
 
         outputs = model(images)
+        # outputs = outputs.permute(0, 3, 1, 2)  # (batch, classes, H, W)
+        # outputs = outputs.mean(dim=[2, 3])  # średnia po H i W
         loss = criterion(outputs, labels)
 
         optimizer.zero_grad()
@@ -58,7 +66,6 @@ for epoch in range(num_epochs):
 
     avg_loss = running_loss / len(train_loader)
 
-    # 🧪 Walidacja
     model.eval()
     correct = 0
     total = 0
@@ -91,7 +98,7 @@ for epoch in range(num_epochs):
     # plt.title("Confusion Matrix")
     # plt.show()
 
-    print("\n📊 Classification Report:")
+    print("\n Classification Report:")
     print(classification_report(all_labels, all_preds))
 
     if val_loss < best_val_loss:
@@ -103,6 +110,7 @@ for epoch in range(num_epochs):
             'val_loss': val_loss,
             'accuracy': accuracy
         }, save_path)
-        print(f"Zapisano nowy najlepszy model, val loss: {val_loss:.4f}")
+        print(f"Save best model, val loss: {val_loss:.4f}")
 
     print(f"\nEpoka {epoch+1} zakończona, Średni loss: {avg_loss:.4f}, Accuracy: {accuracy:.2f}%")
+    torch.save(model.state_dict(), os.path.join(save_dir, f"{model_name}_epoch{epoch + 1}.pth"))
