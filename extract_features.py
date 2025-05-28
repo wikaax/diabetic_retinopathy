@@ -108,7 +108,7 @@ def load_images_from_folders(base_path):
 
 # === START HERE ===
 if __name__ == '__main__':
-    data_path = 'data/train'  # <- ZMIEŃ NA ŚCIEŻKĘ DO SWOICH ZDJĘĆ
+    data_path = 'data/train'
     arch = 'RETFound_mae'
     chkpt_dir = hf_hub_download(repo_id="YukunZhou/RETFound_mae_meh", filename="RETFound_mae_meh.pth")
 
