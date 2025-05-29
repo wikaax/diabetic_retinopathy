@@ -1,0 +1,5 @@
+class_0: 4000 obrazów
+class_1: 2300 obrazów
+class_2: 2415 obrazów
+class_3: 1390 obrazów
+class_4: 1131 obrazów

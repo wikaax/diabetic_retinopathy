@@ -4,7 +4,7 @@ import torch.nn as nn
 import numpy as np
 import pandas as pd
 from PIL import Image
-import external.RETFound_MAE.models_vit as models
+import models.RETFound.models_vit as models
 from huggingface_hub import hf_hub_download
 
 # Ustawienia
@@ -74,16 +74,19 @@ def get_feature_from_folders(base_path, chkpt_dir, arch='vit_large_patch16'):
                 continue
 
             img = img.resize((224, 224))
+            mean = [0.485, 0.456, 0.406]
+            std = [0.229, 0.224, 0.225]
+
             img = np.array(img) / 255.
             for c in range(3):
-                img[..., c] = (img[..., c] - img[..., c].mean()) / (img[..., c].std() + 1e-8)
+                img[..., c] = (img[..., c] - mean[c]) / std[c]
 
             if img.shape != (224, 224, 3):
                 print(f"Wrong shape for {img_path}")
                 continue
 
             latent_feature = run_one_image(img, model_, arch)
-            name_list.append(f"{cls}/{img_name}")  # dla jasności dajemy info z klasą w nazwie
+            name_list.append(f"{cls}/{img_name}")
             feature_list.append(latent_feature.detach().cpu().numpy())
 
     return name_list, feature_list
@@ -111,8 +114,6 @@ if __name__ == '__main__':
     data_path = 'data/train'
     arch = 'RETFound_mae'
     chkpt_dir = hf_hub_download(repo_id="YukunZhou/RETFound_mae_meh", filename="RETFound_mae_meh.pth")
-
-    print("==> Extracting features...")
     name_list, feature_list = get_feature_from_folders(data_path, chkpt_dir, arch=arch)
 
     print("==> Saving features to CSV...")
@@ -122,6 +123,6 @@ if __name__ == '__main__':
 
     column_names = ["feature_{}".format(i) for i in range(df_feature.shape[1])]
     df_visualization.columns = ["name"] + column_names
-    df_visualization.to_csv("Feature.csv", index=False)
+    df_visualization.to_csv("RETfound_features.csv", index=False)
     print("✅ Done. Features saved to Feature.csv")
 
