@@ -102,7 +102,7 @@ def make_positive_definite(matrix, eps=1e-4):
 
 import numpy as np
 
-Z = np.load('logs_trans/retfound_features.npy')
+Z = np.load('medvit_embeddings.npy')
 y = np.load('labels.npy')
 print("y shape: ", y.shape)
 print(y)

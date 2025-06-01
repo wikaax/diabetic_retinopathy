@@ -7,7 +7,6 @@ from PIL import Image
 import models.RETFound.models_vit as models
 from huggingface_hub import hf_hub_download
 
-# Ustawienia
 np.set_printoptions(threshold=np.inf)
 np.random.seed(1)
 torch.manual_seed(1)
@@ -34,8 +33,8 @@ def prepare_model(chkpt_dir, arch='RETFound_mae'):
     return model
 
 def run_one_image(img, model, arch):
-    x = torch.tensor(img).unsqueeze(dim=0)  # dodaje batch dimension
-    x = torch.einsum('nhwc->nchw', x)  # zamiana kanałów na NCHW
+    x = torch.tensor(img).unsqueeze(dim=0)
+    x = torch.einsum('nhwc->nchw', x)
     x = x.to(device, non_blocking=True)
     latent = model.forward_features(x.float())
 
@@ -70,7 +69,7 @@ def get_feature_from_folders(base_path, chkpt_dir, arch='vit_large_patch16'):
             try:
                 img = Image.open(img_path).convert("RGB")
             except:
-                print(f"Failed to open image: {img_path}")
+                print(f"failed to open image")
                 continue
 
             img = img.resize((224, 224))
@@ -98,7 +97,7 @@ def load_images_from_folders(base_path):
     for cls in classes:
         class_path = os.path.join(base_path, cls)
         if not os.path.isdir(class_path):
-            continue  # pomijamy pliki, jeśli takie są
+            continue
         for fname in os.listdir(class_path):
             fpath = os.path.join(class_path, fname)
             try:
@@ -109,14 +108,13 @@ def load_images_from_folders(base_path):
                 print(f"Failed to open image: {fpath} ({e})")
     return images, labels
 
-# === START HERE ===
 if __name__ == '__main__':
     data_path = 'data/train'
     arch = 'RETFound_mae'
     chkpt_dir = hf_hub_download(repo_id="YukunZhou/RETFound_mae_meh", filename="RETFound_mae_meh.pth")
     name_list, feature_list = get_feature_from_folders(data_path, chkpt_dir, arch=arch)
 
-    print("==> Saving features to CSV...")
+    print("saving features to CSV.")
     df_feature = pd.DataFrame(feature_list)
     df_imgname = pd.DataFrame(name_list, columns=["name"])
     df_visualization = pd.concat([df_imgname, df_feature], axis=1)
@@ -124,5 +122,5 @@ if __name__ == '__main__':
     column_names = ["feature_{}".format(i) for i in range(df_feature.shape[1])]
     df_visualization.columns = ["name"] + column_names
     df_visualization.to_csv("RETfound_features.csv", index=False)
-    print("✅ Done. Features saved to Feature.csv")
+    print("features saved")
 
